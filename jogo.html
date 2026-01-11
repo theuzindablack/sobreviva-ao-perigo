@@ -2,26 +2,56 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Capy Road - Skins Realistas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Capy Road - Completo com Árvores e Botões</title>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Arial Black', sans-serif; background-color: #99c846; }
+        body { margin: 0; overflow: hidden; font-family: 'Arial Black', sans-serif; background-color: #99c846; touch-action: none; }
         canvas.game { display: block; width: 100vw; height: 100vh; }
+
         #score-ui {
-            position: absolute; top: 30px; width: 100%; text-align: center;
-            font-size: 80px; font-weight: 900; color: white;
+            position: absolute; top: 20px; width: 100%; text-align: center;
+            font-size: 60px; font-weight: 900; color: white;
             text-shadow: 0 5px 15px rgba(0,0,0,0.3); pointer-events: none; z-index: 10;
         }
+
         #back-btn {
-            position: absolute; top: 20px; left: 20px; padding: 12px 25px;
-            background: white; border: none; border-radius: 15px;
-            font-weight: bold; cursor: pointer; box-shadow: 0 5px 0 #ddd; z-index: 100;
+            position: absolute; top: 20px; left: 20px; padding: 12px 20px;
+            background: white; border: none; border-radius: 12px;
+            font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #ddd; z-index: 100;
         }
+
+        /* CONTROLES MOBILE SEMPRE VISÍVEIS */
+        #controls {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            display: grid; grid-template-columns: repeat(3, 85px); grid-template-rows: repeat(2, 85px);
+            gap: 10px; z-index: 200;
+        }
+        .btn {
+            width: 85px; height: 85px; background: rgba(0, 150, 255, 0.7);
+            border: 4px solid white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 40px; user-select: none; cursor: pointer;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.2);
+        }
+        .btn:active { background: #0070ff; transform: scale(0.9); }
+        .up { grid-column: 2; }
+        .left { grid-column: 1; grid-row: 2; }
+        .down { grid-column: 2; grid-row: 2; }
+        .right { grid-column: 3; grid-row: 2; }
     </style>
 </head>
 <body>
 
-<button id="back-btn" onclick="window.location.href='index.html'">MENU</button>
+<button id="back-btn" onclick="window.location.href='index.html'">SAIR</button>
 <div id="score-ui">0</div>
+
+<div id="controls">
+    <div class="btn up" id="m-up">▲</div>
+    <div class="btn left" id="m-left">◀</div>
+    <div class="btn down" id="m-down">▼</div>
+    <div class="btn right" id="m-right">▶</div>
+</div>
+
 <canvas class="game"></canvas>
 
 <script type="module">
@@ -49,9 +79,11 @@
     camera.position.set(300, -300, 300);
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
-    dirLight.position.set(-100, -150, 300);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.7);
+    dirLight.position.set(-100, -200, 300);
     dirLight.castShadow = true;
+    dirLight.shadow.camera.left = -500; dirLight.shadow.camera.right = 500;
+    dirLight.shadow.camera.top = 500; dirLight.shadow.camera.bottom = -500;
     scene.add(dirLight);
 
     function resize() {
@@ -64,82 +96,14 @@
     }
     window.addEventListener('resize', resize); resize();
 
-    // --- CONSTRUTOR DE PERSONAGENS BONITOS ---
-    function buildPlayer() {
-        player.clear();
-        const group = new THREE.Group();
-        const eyeMat = new THREE.MeshLambertMaterial({color: 0x000000});
-        const eyeGeo = new THREE.BoxGeometry(2, 2, 2);
-
-        if(skinAtual === 'capy') {
-            const mat = new THREE.MeshLambertMaterial({color: 0x795548});
-            const darkMat = new THREE.MeshLambertMaterial({color: 0x4e342e});
-            const body = new THREE.Mesh(new THREE.BoxGeometry(22, 34, 18), mat);
-            body.position.z = 15; body.castShadow = true; group.add(body);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(16, 14, 14), mat);
-            head.position.set(0, 18, 22); group.add(head);
-            const snout = new THREE.Mesh(new THREE.BoxGeometry(16, 10, 10), darkMat);
-            snout.position.set(0, 24, 20); group.add(snout);
-            const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(8.5, 20, 24); group.add(eL);
-            const eR = eL.clone(); eR.position.x = -8.5; group.add(eR);
-        } 
-        else if(skinAtual === 'dino') {
-            const mat = new THREE.MeshLambertMaterial({color: 0x388E3C});
-            const bellyMat = new THREE.MeshLambertMaterial({color: 0xC5E1A5});
-            const body = new THREE.Mesh(new THREE.BoxGeometry(18, 22, 26), mat);
-            body.position.z = 15; body.castShadow = true; group.add(body);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(14, 24, 14), mat);
-            head.position.set(0, 10, 32); group.add(head);
-            const belly = new THREE.Mesh(new THREE.BoxGeometry(14, 2, 18), bellyMat);
-            belly.position.set(0, 11, 15); group.add(belly);
-            const tail = new THREE.Mesh(new THREE.BoxGeometry(8, 20, 8), mat);
-            tail.position.set(0, -18, 10); tail.rotation.x = -Math.PI/4; group.add(tail);
-            const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(7.5, 18, 36); group.add(eL);
-            const eR = eL.clone(); eR.position.x = -7.5; group.add(eR);
-        }
-        else if(skinAtual === 'pingu') {
-            const mat = new THREE.MeshLambertMaterial({color: 0x212121});
-            const whiteMat = new THREE.MeshLambertMaterial({color: 0xFFFFFF});
-            const orangeMat = new THREE.MeshLambertMaterial({color: 0xFFA000});
-            const body = new THREE.Mesh(new THREE.BoxGeometry(22, 22, 28), mat);
-            body.position.z = 14; body.castShadow = true; group.add(body);
-            const belly = new THREE.Mesh(new THREE.BoxGeometry(16, 4, 20), whiteMat);
-            belly.position.set(0, 10, 12); group.add(belly);
-            const beak = new THREE.Mesh(new THREE.BoxGeometry(6, 6, 4), orangeMat);
-            beak.position.set(0, 12, 22); group.add(beak);
-            const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(6, 10, 26); group.add(eL);
-            const eR = eL.clone(); eR.position.x = -6; group.add(eR);
-        }
-        else if(skinAtual === 'croco') {
-            const mat = new THREE.MeshLambertMaterial({color: 0x1B5E20});
-            const body = new THREE.Mesh(new THREE.BoxGeometry(24, 48, 10), mat);
-            body.position.z = 6; body.castShadow = true; group.add(body);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(20, 22, 10), mat);
-            head.position.set(0, 32, 8); group.add(head);
-            const tail = new THREE.Mesh(new THREE.BoxGeometry(14, 35, 8), mat);
-            tail.position.set(0, -35, 6); group.add(tail);
-            const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(8, 30, 14); group.add(eL);
-            const eR = eL.clone(); eR.position.x = -8; group.add(eR);
-        }
-
-        // Patas universais para todos
-        const legGeo = new THREE.BoxGeometry(5, 5, 6);
-        const legMat = new THREE.MeshLambertMaterial({color: 0x333333});
-        [[-7, 10], [7, 10], [-7, -10], [7, -10]].forEach(p => {
-            const leg = new THREE.Mesh(legGeo, legMat);
-            leg.position.set(p[0], p[1], 3); group.add(leg);
-        });
-
-        player.add(group);
-    }
-
-    // --- LOGICA DE AMBIENTE (CARROS E ARVORES) ---
+    // MODELOS
     function createTree(tile) {
-        const group = new THREE.Group(); group.position.x = tile * tileSize;
-        const trunk = new THREE.Mesh(new THREE.BoxGeometry(10,10,18), new THREE.MeshLambertMaterial({color: 0x4d2926}));
-        trunk.position.z = 9; group.add(trunk);
-        const crown = new THREE.Mesh(new THREE.BoxGeometry(28,28,30), new THREE.MeshLambertMaterial({color: 0x7aa21d}));
-        crown.position.z = 30; crown.castShadow = true; group.add(crown);
+        const group = new THREE.Group();
+        group.position.x = tile * tileSize;
+        const trunk = new THREE.Mesh(new THREE.BoxGeometry(12, 12, 20), new THREE.MeshLambertMaterial({ color: 0x4d2926 }));
+        trunk.position.z = 10; group.add(trunk);
+        const crown = new THREE.Mesh(new THREE.BoxGeometry(30, 30, 35), new THREE.MeshLambertMaterial({ color: 0x7aa21d }));
+        crown.position.z = 35; crown.castShadow = true; group.add(crown);
         return group;
     }
 
@@ -150,20 +114,39 @@
         body.position.z = 12; body.castShadow = true; car.add(body);
         const roof = new THREE.Mesh(new THREE.BoxGeometry(35, 26, 10), new THREE.MeshLambertMaterial({ color: 0x333333 }));
         roof.position.set(-5, 0, 24); car.add(roof);
-        const wheelGeo = new THREE.BoxGeometry(10, 6, 10);
-        const wheelMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
-        [[-20,15], [-20,-15], [20,15], [20,-15]].forEach(p => {
-            const w = new THREE.Mesh(wheelGeo, wheelMat);
-            w.position.set(p[0], p[1], 5); car.add(w);
-        });
         if(!dir) car.rotation.z = Math.PI;
         return car;
+    }
+
+    function buildPlayer() {
+        player.clear();
+        const g = new THREE.Group();
+        if(skinAtual === 'capy') {
+            const mat = new THREE.MeshLambertMaterial({color: 0x795548});
+            const body = new THREE.Mesh(new THREE.BoxGeometry(22, 34, 18), mat); body.position.z = 15; body.castShadow = true; g.add(body);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(16, 14, 14), mat); head.position.set(0, 18, 22); g.add(head);
+            const snout = new THREE.Mesh(new THREE.BoxGeometry(16, 10, 10), new THREE.MeshLambertMaterial({color: 0x4e342e})); snout.position.set(0, 24, 20); g.add(snout);
+            const eye = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshLambertMaterial({color:0})); eye.position.set(8.5, 20, 24); g.add(eye);
+            const eyeR = eye.clone(); eyeR.position.x = -8.5; g.add(eyeR);
+        } else if(skinAtual === 'dino') {
+            const mat = new THREE.MeshLambertMaterial({color: 0x388E3C});
+            const body = new THREE.Mesh(new THREE.BoxGeometry(18, 22, 26), mat); body.position.z = 15; body.castShadow = true; g.add(body);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(14, 24, 14), mat); head.position.set(0, 10, 32); g.add(head);
+        } else if(skinAtual === 'pingu') {
+            const mat = new THREE.MeshLambertMaterial({color: 0x212121});
+            const body = new THREE.Mesh(new THREE.BoxGeometry(22, 22, 28), mat); body.position.z = 14; body.castShadow = true; g.add(body);
+        }
+        const legGeo = new THREE.BoxGeometry(6, 6, 8);
+        [[-7, 12], [7, 12], [-7, -12], [7, -12]].forEach(p => {
+            const leg = new THREE.Mesh(legGeo, new THREE.MeshLambertMaterial({color: 0x333333})); leg.position.set(p[0], p[1], 4); g.add(leg);
+        });
+        player.add(g);
     }
 
     function addRows(n) {
         for(let i=0; i<n; i++) {
             const rowIdx = metadata.length + 1;
-            const isRoad = Math.random() > 0.4;
+            const isRoad = Math.random() > 0.5;
             const row = new THREE.Group(); row.position.y = rowIdx * tileSize;
             let data = { type: isRoad?"road":"grass", vehicles: [], trees: [] };
             if(isRoad) {
@@ -174,9 +157,11 @@
             } else {
                 const g = new THREE.Mesh(new THREE.BoxGeometry(1200, tileSize, 2), new THREE.MeshLambertMaterial({color:0xbaf455}));
                 g.receiveShadow = true; row.add(g);
-                for(let t=0; t<2; t++) {
+                for(let t=0; t<3; t++) {
                     const tIdx = Math.floor(Math.random()*(maxTile-minTile)) + minTile;
-                    if(tIdx !== 0) { const tree = createTree(tIdx); row.add(tree); data.trees.push(tIdx); }
+                    if(tIdx !== 0 || rowIdx > 2) { 
+                        const tree = createTree(tIdx); row.add(tree); data.trees.push(tIdx); 
+                    }
                 }
             }
             metadata.push(data); map.add(row);
@@ -189,12 +174,10 @@
         let tTile = position.tile + (d==="right"?1:d==="left"?-1:0);
         if(tRow < 0 || tTile < minTile || tTile > maxTile) return;
         if(metadata[tRow-1]?.type === "grass" && metadata[tRow-1].trees.includes(tTile)) return;
-        
         if(d === "forward") player.rotation.z = 0;
         if(d === "backward") player.rotation.z = Math.PI;
         if(d === "left") player.rotation.z = Math.PI / 2;
         if(d === "right") player.rotation.z = -Math.PI / 2;
-
         movesQueue.push({ dir: d, tX: tTile * tileSize, tY: tRow * tileSize, progress: 0 });
     }
 
@@ -214,6 +197,7 @@
                 player.position.y = THREE.MathUtils.lerp(position.row * tileSize, m.tY, m.progress);
                 player.position.z = Math.sin(m.progress * Math.PI) * 18;
                 if(m.progress >= 1) {
+                    player.position.set(m.tX, m.tY, 0); player.position.z = 0;
                     position.row += (m.dir==="forward"?1:m.dir==="backward"?-1:0);
                     position.tile += (m.dir==="right"?1:m.dir==="left"?-1:0);
                     movesQueue.shift(); score = position.row;
@@ -228,16 +212,22 @@
                 }
             });
         }
-        camera.position.y = player.position.y - 250;
-        camera.position.x = player.position.x + 250;
-        camera.lookAt(player.position.x, player.position.y, 0);
-        renderer.render(scene, camera);
+        camera.position.y = player.position.y - 250; camera.position.x = player.position.x + 250;
+        camera.lookAt(player.position.x, player.position.y, 0); renderer.render(scene, camera);
     }
 
     window.onkeydown = (e) => {
         const k = { ArrowUp:"forward", ArrowDown:"backward", ArrowLeft:"left", ArrowRight:"right" };
         if(k[e.key]) move(k[e.key]);
     };
+
+    const setupBtn = (id, dir) => {
+        const el = document.getElementById(id);
+        el.addEventListener('touchstart', (e) => { e.preventDefault(); move(dir); });
+        el.addEventListener('mousedown', (e) => { move(dir); });
+    };
+    setupBtn('m-up', 'forward'); setupBtn('m-down', 'backward');
+    setupBtn('m-left', 'left'); setupBtn('m-right', 'right');
 
     function init() {
         for(let i=0; i>-5; i--) {
