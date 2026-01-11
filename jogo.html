@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Capy Road - Oficial</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Arial Black', sans-serif; background-color: #99c846; }
+        canvas.game { display: block; width: 100vw; height: 100vh; }
+
+        #score-ui {
+            position: absolute; top: 30px; width: 100%; text-align: center;
+            font-size: 80px; font-weight: 900; color: white;
+            text-shadow: 0 5px 15px rgba(0,0,0,0.3); pointer-events: none; z-index: 10;
+        }
+
+        #back-btn {
+            position: absolute; top: 20px; left: 20px; padding: 12px 25px;
+            background: white; border: none; border-radius: 15px;
+            font-weight: bold; cursor: pointer; box-shadow: 0 5px 0 #ddd; z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<button id="back-btn" onclick="window.location.href='index.html'">SAIR</button>
+<div id="score-ui">0</div>
+<canvas class="game"></canvas>
+
+<script type="module">
+    import * as THREE from "https://esm.sh/three";
+
+    const skinAtual = localStorage.getItem('skinAtual') || 'capy';
+    const tileSize = 42;
+    const minTile = -6;
+    const maxTile = 6;
+    let isGameOver = false, metadata = [], score = 0;
+    let position = { row: 0, tile: 0 };
+    let movesQueue = [];
+
+    // --- CENA E RENDER ---
+    const scene = new THREE.Scene();
+    const map = new THREE.Group(); scene.add(map);
+    const player = new THREE.Group(); scene.add(player);
+
+    const renderer = new THREE.WebGLRenderer({ canvas: document.querySelector(".game"), antialias: true });
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setClearColor(0x99c846);
+
+    const camera = new THREE.OrthographicCamera();
+    camera.up.set(0, 0, 1);
+    camera.position.set(300, -300, 300);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(-100, -150, 300);
+    dirLight.castShadow = true;
+    dirLight.shadow.camera.left = -400; dirLight.shadow.camera.right = 400;
+    dirLight.shadow.camera.top = 400; dirLight.shadow.camera.bottom = -400;
+    scene.add(dirLight);
+
+    function resize() {
+        const r = window.innerWidth / window.innerHeight;
+        const s = 150;
+        camera.left = -s * r; camera.right = s * r;
+        camera.top = s; camera.bottom = -s;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', resize); resize();
+
+    // --- CONSTRUTORES DE MODELOS BONITOS ---
+
+    function createTree(tile) {
+        const group = new THREE.Group();
+        group.position.x = tile * tileSize;
+        const trunk = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 18), new THREE.MeshLambertMaterial({ color: 0x4d2926 }));
+        trunk.position.z = 9; group.add(trunk);
+        const crown = new THREE.Mesh(new THREE.BoxGeometry(28, 28, 30), new THREE.MeshLambertMaterial({ color: 0x7aa21d }));
+        crown.position.z = 30; crown.castShadow = true; group.add(crown);
+        return group;
+    }
+
+    function createRealisticCar(dir) {
+        const car = new THREE.Group();
+        const colors = [0xff4757, 0x1e90ff, 0xffa502, 0x2f3542];
+        const body = new THREE.Mesh(new THREE.BoxGeometry(65, 30, 16), new THREE.MeshLambertMaterial({ color: colors[Math.floor(Math.random()*4)] }));
+        body.position.z = 12; body.castShadow = true; car.add(body);
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(35, 26, 10), new THREE.MeshLambertMaterial({ color: 0x333333 }));
+        roof.position.set(-5, 0, 24); car.add(roof);
+        const wheelGeo = new THREE.BoxGeometry(10, 6, 10);
+        const wheelMat = new THREE.MeshLambertMaterial({ color: 0x222222 });
+        [[-20,15], [-20,-15], [20,15], [20,-15]].forEach(p => {
+            const w = new THREE.Mesh(wheelGeo, wheelMat);
+            w.position.set(p[0], p[1], 5); car.add(w);
+        });
+        if(!dir) car.rotation.z = Math.PI;
+        return car;
+    }
+
+    function buildPlayer() {
+        player.clear();
+        const capyColor = 0x795548;
+        const darkCapyColor = 0x4e342e;
+        
+        if(skinAtual === 'capy') {
+            const body = new THREE.Mesh(new THREE.BoxGeometry(22, 34, 18), new THREE.MeshLambertMaterial({color: capyColor}));
+            body.position.z = 12; body.castShadow = true; player.add(body);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(16, 14, 14), new THREE.MeshLambertMaterial({color: capyColor}));
+            head.position.set(0, 18, 18); player.add(head);
+            const snout = new THREE.Mesh(new THREE.BoxGeometry(16, 8, 10), new THREE.MeshLambertMaterial({color: darkCapyColor}));
+            snout.position.set(0, 24, 16); player.add(snout);
+            const eyeL = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshLambertMaterial({color:0}));
+            eyeL.position.set(8.5, 20, 20); player.add(eyeL);
+            const eyeR = eyeL.clone(); eyeR.position.x = -8.5; player.add(eyeR);
+        } else if(skinAtual === 'dino') {
+            const dMat = new THREE.MeshLambertMaterial({ color: 0x2d5a27 });
+            const body = new THREE.Mesh(new THREE.BoxGeometry(18, 25, 25), dMat); body.position.z = 15; body.castShadow = true; player.add(body);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(14, 20, 15), dMat); head.position.set(0, 15, 30); player.add(head);
+            const tail = new THREE.Mesh(new THREE.BoxGeometry(10, 20, 10), dMat); tail.position.set(0, -15, 12); player.add(tail);
+        } else {
+            const basic = new THREE.Mesh(new THREE.BoxGeometry(20,20,20), new THREE.MeshLambertMaterial({color: 0xffffff}));
+            basic.position.z = 10; basic.castShadow = true; player.add(basic);
+        }
+    }
+
+    // --- LOGICA DE JOGO ---
+    function addRows(n) {
+        for(let i=0; i<n; i++) {
+            const rowIdx = metadata.length + 1;
+            const isRoad = Math.random() > 0.5;
+            const row = new THREE.Group(); row.position.y = rowIdx * tileSize;
+            let data = { type: isRoad?"road":"grass", vehicles: [], trees: [] };
+            if(isRoad) {
+                const r = new THREE.Mesh(new THREE.PlaneGeometry(1200, tileSize), new THREE.MeshLambertMaterial({color:0x454a59}));
+                r.receiveShadow = true; row.add(r);
+                data.dir = Math.random() > 0.5; data.speed = 130 + Math.random()*100;
+                const v = createRealisticCar(data.dir); row.add(v); data.vehicles.push({ ref: v });
+            } else {
+                const g = new THREE.Mesh(new THREE.BoxGeometry(1200, tileSize, 2), new THREE.MeshLambertMaterial({color:0xbaf455}));
+                g.receiveShadow = true; row.add(g);
+                for(let t=0; t<2; t++) {
+                    const tIdx = Math.floor(Math.random()*(maxTile-minTile)) + minTile;
+                    if(tIdx !== 0) { const tree = createTree(tIdx); row.add(tree); data.trees.push(tIdx); }
+                }
+            }
+            metadata.push(data); map.add(row);
+        }
+    }
+
+    function move(d) {
+        if(isGameOver || movesQueue.length > 0) return;
+        let tRow = position.row + (d==="forward"?1:d==="backward"?-1:0);
+        let tTile = position.tile + (d==="right"?1:d==="left"?-1:0);
+        if(tRow < 0 || tTile < minTile || tTile > maxTile) return;
+        if(metadata[tRow-1]?.type === "grass" && metadata[tRow-1].trees.includes(tTile)) return;
+        movesQueue.push({ dir: d, tX: tTile * tileSize, tY: tRow * tileSize, progress: 0 });
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if(!isGameOver) {
+            metadata.forEach(r => {
+                r.vehicles?.forEach(v => {
+                    v.ref.position.x += (r.dir?1:-1) * r.speed * 0.016;
+                    if(v.ref.position.x > 500) v.ref.position.x = -500;
+                    if(v.ref.position.x < -500) v.ref.position.x = 500;
+                });
+            });
+            if(movesQueue.length > 0) {
+                const m = movesQueue[0]; m.progress += 0.25;
+                player.position.x = THREE.MathUtils.lerp(position.tile * tileSize, m.tX, m.progress);
+                player.position.y = THREE.MathUtils.lerp(position.row * tileSize, m.tY, m.progress);
+                player.children[0].position.z = Math.sin(m.progress * Math.PI) * 18;
+                if(m.progress >= 1) {
+                    position.row += (m.dir==="forward"?1:m.dir==="backward"?-1:0);
+                    position.tile += (m.dir==="right"?1:m.dir==="left"?-1:0);
+                    movesQueue.shift(); score = position.row;
+                    document.getElementById('score-ui').innerText = score;
+                    if(position.row > metadata.length - 15) addRows(10);
+                }
+            }
+            const curR = metadata[position.row - 1];
+            curR?.vehicles?.forEach(v => {
+                if(Math.abs(v.ref.position.x - player.position.x) < 38) {
+                    isGameOver = true; setTimeout(() => window.location.reload(), 1000);
+                }
+            });
+        }
+        camera.position.y = player.position.y - 250; camera.position.x = player.position.x + 250;
+        camera.lookAt(player.position.x, player.position.y, 0); renderer.render(scene, camera);
+    }
+
+    window.onkeydown = (e) => {
+        const k = { ArrowUp:"forward", ArrowDown:"backward", ArrowLeft:"left", ArrowRight:"right" };
+        if(k[e.key]) move(k[e.key]);
+    };
+
+    function init() {
+        for(let i=0; i>-5; i--) {
+            const g = new THREE.Mesh(new THREE.BoxGeometry(1200,tileSize,2), new THREE.MeshLambertMaterial({color:0xbaf455}));
+            g.position.y = i * tileSize; map.add(g);
+        }
+        addRows(30); buildPlayer(); animate();
+    }
+    init();
+</script>
+</body>
+</html>
