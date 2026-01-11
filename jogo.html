@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Capy Road - Skins Corrigidas</title>
+    <title>Capy Road - Jacaré Arrumado</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Arial Black', sans-serif; background-color: #99c846; touch-action: none; }
         canvas.game { display: block; width: 100vw; height: 100vh; }
@@ -89,7 +89,6 @@
     }
     window.addEventListener('resize', resize); resize();
 
-    // --- CONSTRUÇÃO DO PLAYER SEM BUGS ---
     function buildPlayer() {
         player.clear();
         const g = new THREE.Group();
@@ -113,8 +112,6 @@
             body.position.z = 15; body.castShadow = true; g.add(body);
             const head = new THREE.Mesh(new THREE.BoxGeometry(14, 24, 14), mat);
             head.position.set(0, 10, 32); g.add(head);
-            const belly = new THREE.Mesh(new THREE.BoxGeometry(14, 2, 18), new THREE.MeshLambertMaterial({color: 0xC5E1A5}));
-            belly.position.set(0, 11, 15); g.add(belly);
             const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(7.5, 18, 36); g.add(eL);
             const eR = eL.clone(); eR.position.x = -7.5; g.add(eR);
         }
@@ -128,21 +125,31 @@
             beak.position.set(0, 12, 22); g.add(beak);
         }
         else if(skinAtual === 'croco') {
-            const mat = new THREE.MeshLambertMaterial({color: 0x1B5E20});
-            const body = new THREE.Mesh(new THREE.BoxGeometry(24, 48, 10), mat);
-            body.position.z = 6; body.castShadow = true; g.add(body);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(20, 22, 10), mat);
-            head.position.set(0, 32, 8); g.add(head);
+            const mat = new THREE.MeshLambertMaterial({color: 0x2E7D32}); // Verde escuro
+            // Corpo (em pé)
+            const body = new THREE.Mesh(new THREE.BoxGeometry(20, 24, 24), mat);
+            body.position.z = 12; body.castShadow = true; g.add(body);
+            // Focinho comprido
+            const snout = new THREE.Mesh(new THREE.BoxGeometry(14, 20, 10), mat);
+            snout.position.set(0, 18, 14); g.add(snout);
+            // Cristas/Costas
+            const spikeGeo = new THREE.BoxGeometry(8, 8, 8);
+            const spikeMat = new THREE.MeshLambertMaterial({color: 0x1B5E20});
+            for(let i=0; i<3; i++){
+                const s = new THREE.Mesh(spikeGeo, spikeMat);
+                s.position.set(0, -8 + (i*8), 26); g.add(s);
+            }
+            // Olhos
+            const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(7, 10, 25); g.add(eL);
+            const eR = eL.clone(); eR.position.x = -7; g.add(eR);
         }
 
-        // Patas padrão para todos não afundarem
         const legGeo = new THREE.BoxGeometry(6, 6, 8);
         const legMat = new THREE.MeshLambertMaterial({color: 0x333333});
-        [[-7, 12], [7, 12], [-7, -12], [7, -12]].forEach(p => {
+        [[-7, 10], [7, 10], [-7, -10], [7, -10]].forEach(p => {
             const leg = new THREE.Mesh(legGeo, legMat);
             leg.position.set(p[0], p[1], 4); g.add(leg);
         });
-
         player.add(g);
     }
 
@@ -157,11 +164,14 @@
 
     function createRealisticCar(dir) {
         const car = new THREE.Group();
-        const colors = [0xff4757, 0x1e90ff, 0xffa502, 0x2f3542];
-        const body = new THREE.Mesh(new THREE.BoxGeometry(65, 30, 16), new THREE.MeshLambertMaterial({ color: colors[Math.floor(Math.random()*4)] }));
+        const colors = [0xff4757, 0x1e90ff, 0xffa502, 0x2f3542, 0x2ecc71];
+        const mainColor = colors[Math.floor(Math.random()*colors.length)];
+        const body = new THREE.Mesh(new THREE.BoxGeometry(65, 30, 16), new THREE.MeshLambertMaterial({ color: mainColor }));
         body.position.z = 12; body.castShadow = true; car.add(body);
-        const roof = new THREE.Mesh(new THREE.BoxGeometry(35, 26, 10), new THREE.MeshLambertMaterial({ color: 0x333333 }));
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(35, 26, 12), new THREE.MeshLambertMaterial({ color: 0x333333 }));
         roof.position.set(-5, 0, 24); car.add(roof);
+        const window = new THREE.Mesh(new THREE.BoxGeometry(2, 22, 8), new THREE.MeshLambertMaterial({color: 0x81ecec}));
+        window.position.set(14, 0, 24); car.add(window);
         if(!dir) car.rotation.z = Math.PI;
         return car;
     }
@@ -197,23 +207,28 @@
         let tTile = position.tile + (d==="right"?1:d==="left"?-1:0);
         if(tRow < 0 || tTile < minTile || tTile > maxTile) return;
         if(metadata[tRow-1]?.type === "grass" && metadata[tRow-1].trees.includes(tTile)) return;
-        
         if(d === "forward") player.rotation.z = 0;
         if(d === "backward") player.rotation.z = Math.PI;
         if(d === "left") player.rotation.z = Math.PI / 2;
         if(d === "right") player.rotation.z = -Math.PI / 2;
-
         movesQueue.push({ dir: d, tX: tTile * tileSize, tY: tRow * tileSize, progress: 0 });
     }
 
     function animate() {
         requestAnimationFrame(animate);
         if(!isGameOver) {
-            metadata.forEach(r => {
+            metadata.forEach((r, idx) => {
+                const rowY = (idx + 1) * tileSize;
                 r.vehicles?.forEach(v => {
                     v.ref.position.x += (r.dir?1:-1) * r.speed * 0.016;
                     if(v.ref.position.x > 500) v.ref.position.x = -500;
                     if(v.ref.position.x < -500) v.ref.position.x = 500;
+                    
+                    const dx = Math.abs(v.ref.position.x - player.position.x);
+                    const dy = Math.abs(rowY - player.position.y);
+                    if(dx < 40 && dy < 20) {
+                        isGameOver = true; setTimeout(() => window.location.reload(), 500);
+                    }
                 });
             });
             if(movesQueue.length > 0) {
@@ -230,21 +245,10 @@
                     if(position.row > metadata.length - 15) addRows(10);
                 }
             }
-            const curR = metadata[position.row - 1];
-            curR?.vehicles?.forEach(v => {
-                if(Math.abs(v.ref.position.x - player.position.x) < 38) {
-                    isGameOver = true; setTimeout(() => window.location.reload(), 500);
-                }
-            });
         }
         camera.position.y = player.position.y - 250; camera.position.x = player.position.x + 250;
         camera.lookAt(player.position.x, player.position.y, 0); renderer.render(scene, camera);
     }
-
-    window.onkeydown = (e) => {
-        const k = { ArrowUp:"forward", ArrowDown:"backward", ArrowLeft:"left", ArrowRight:"right" };
-        if(k[e.key]) move(k[e.key]);
-    };
 
     const setupBtn = (id, dir) => {
         const el = document.getElementById(id);
