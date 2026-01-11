@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Capy Road - Oficial</title>
+    <title>Capy Road - Versão Final</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Arial Black', sans-serif; background-color: #99c846; }
         canvas.game { display: block; width: 100vw; height: 100vh; }
@@ -18,11 +18,12 @@
             background: white; border: none; border-radius: 15px;
             font-weight: bold; cursor: pointer; box-shadow: 0 5px 0 #ddd; z-index: 100;
         }
+        #back-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #ddd; }
     </style>
 </head>
 <body>
 
-<button id="back-btn" onclick="window.location.href='index.html'">SAIR</button>
+<button id="back-btn" onclick="window.location.href='index.html'">MENU</button>
 <div id="score-ui">0</div>
 <canvas class="game"></canvas>
 
@@ -69,7 +70,7 @@
     }
     window.addEventListener('resize', resize); resize();
 
-    // --- CONSTRUTORES DE MODELOS BONITOS ---
+    // --- CONSTRUTORES DE MODELOS ---
 
     function createTree(tile) {
         const group = new THREE.Group();
@@ -100,28 +101,45 @@
 
     function buildPlayer() {
         player.clear();
-        const capyColor = 0x795548;
-        const darkCapyColor = 0x4e342e;
+        const capyGroup = new THREE.Group();
         
         if(skinAtual === 'capy') {
-            const body = new THREE.Mesh(new THREE.BoxGeometry(22, 34, 18), new THREE.MeshLambertMaterial({color: capyColor}));
-            body.position.z = 12; body.castShadow = true; player.add(body);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(16, 14, 14), new THREE.MeshLambertMaterial({color: capyColor}));
-            head.position.set(0, 18, 18); player.add(head);
-            const snout = new THREE.Mesh(new THREE.BoxGeometry(16, 8, 10), new THREE.MeshLambertMaterial({color: darkCapyColor}));
-            snout.position.set(0, 24, 16); player.add(snout);
+            const mat = new THREE.MeshLambertMaterial({color: 0x795548});
+            const darkMat = new THREE.MeshLambertMaterial({color: 0x4e342e});
+
+            // Corpo elevado (Z=15)
+            const body = new THREE.Mesh(new THREE.BoxGeometry(22, 34, 18), mat);
+            body.position.z = 15; body.castShadow = true; capyGroup.add(body);
+
+            // Cabeça
+            const head = new THREE.Mesh(new THREE.BoxGeometry(16, 14, 14), mat);
+            head.position.set(0, 18, 22); capyGroup.add(head);
+
+            // Focinho
+            const snout = new THREE.Mesh(new THREE.BoxGeometry(16, 10, 10), darkMat);
+            snout.position.set(0, 24, 20); capyGroup.add(snout);
+
+            // Patas tocando o chão
+            const legGeo = new THREE.BoxGeometry(6, 6, 8);
+            [[-7, 12], [7, 12], [-7, -12], [7, -12]].forEach(p => {
+                const leg = new THREE.Mesh(legGeo, mat);
+                leg.position.set(p[0], p[1], 4); capyGroup.add(leg);
+            });
+
+            // Olhos
             const eyeL = new THREE.Mesh(new THREE.BoxGeometry(2,2,2), new THREE.MeshLambertMaterial({color:0}));
-            eyeL.position.set(8.5, 20, 20); player.add(eyeL);
-            const eyeR = eyeL.clone(); eyeR.position.x = -8.5; player.add(eyeR);
+            eyeL.position.set(8.5, 20, 24); capyGroup.add(eyeL);
+            const eyeR = eyeL.clone(); eyeR.position.x = -8.5; capyGroup.add(eyeR);
         } else if(skinAtual === 'dino') {
             const dMat = new THREE.MeshLambertMaterial({ color: 0x2d5a27 });
-            const body = new THREE.Mesh(new THREE.BoxGeometry(18, 25, 25), dMat); body.position.z = 15; body.castShadow = true; player.add(body);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(14, 20, 15), dMat); head.position.set(0, 15, 30); player.add(head);
-            const tail = new THREE.Mesh(new THREE.BoxGeometry(10, 20, 10), dMat); tail.position.set(0, -15, 12); player.add(tail);
-        } else {
-            const basic = new THREE.Mesh(new THREE.BoxGeometry(20,20,20), new THREE.MeshLambertMaterial({color: 0xffffff}));
-            basic.position.z = 10; basic.castShadow = true; player.add(basic);
+            const body = new THREE.Mesh(new THREE.BoxGeometry(18, 25, 25), dMat);
+            body.position.z = 15; body.castShadow = true; capyGroup.add(body);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(14, 20, 15), dMat);
+            head.position.set(0, 15, 30); capyGroup.add(head);
+            const tail = new THREE.Mesh(new THREE.BoxGeometry(10, 20, 10), dMat);
+            tail.position.set(0, -15, 12); capyGroup.add(tail);
         }
+        player.add(capyGroup);
     }
 
     // --- LOGICA DE JOGO ---
@@ -131,6 +149,7 @@
             const isRoad = Math.random() > 0.5;
             const row = new THREE.Group(); row.position.y = rowIdx * tileSize;
             let data = { type: isRoad?"road":"grass", vehicles: [], trees: [] };
+
             if(isRoad) {
                 const r = new THREE.Mesh(new THREE.PlaneGeometry(1200, tileSize), new THREE.MeshLambertMaterial({color:0x454a59}));
                 r.receiveShadow = true; row.add(r);
@@ -152,8 +171,16 @@
         if(isGameOver || movesQueue.length > 0) return;
         let tRow = position.row + (d==="forward"?1:d==="backward"?-1:0);
         let tTile = position.tile + (d==="right"?1:d==="left"?-1:0);
+        
         if(tRow < 0 || tTile < minTile || tTile > maxTile) return;
         if(metadata[tRow-1]?.type === "grass" && metadata[tRow-1].trees.includes(tTile)) return;
+
+        // ROTAÇÃO
+        if(d === "forward") player.rotation.z = 0;
+        if(d === "backward") player.rotation.z = Math.PI;
+        if(d === "left") player.rotation.z = Math.PI / 2;
+        if(d === "right") player.rotation.z = -Math.PI / 2;
+
         movesQueue.push({ dir: d, tX: tTile * tileSize, tY: tRow * tileSize, progress: 0 });
     }
 
@@ -167,28 +194,38 @@
                     if(v.ref.position.x < -500) v.ref.position.x = 500;
                 });
             });
+
             if(movesQueue.length > 0) {
-                const m = movesQueue[0]; m.progress += 0.25;
+                const m = movesQueue[0];
+                m.progress += 0.25;
                 player.position.x = THREE.MathUtils.lerp(position.tile * tileSize, m.tX, m.progress);
                 player.position.y = THREE.MathUtils.lerp(position.row * tileSize, m.tY, m.progress);
-                player.children[0].position.z = Math.sin(m.progress * Math.PI) * 18;
+                player.position.z = Math.sin(m.progress * Math.PI) * 18;
+
                 if(m.progress >= 1) {
+                    player.position.set(m.tX, m.tY, 0);
+                    player.position.z = 0;
                     position.row += (m.dir==="forward"?1:m.dir==="backward"?-1:0);
                     position.tile += (m.dir==="right"?1:m.dir==="left"?-1:0);
-                    movesQueue.shift(); score = position.row;
+                    movesQueue.shift();
+                    score = position.row;
                     document.getElementById('score-ui').innerText = score;
                     if(position.row > metadata.length - 15) addRows(10);
                 }
             }
+
             const curR = metadata[position.row - 1];
             curR?.vehicles?.forEach(v => {
                 if(Math.abs(v.ref.position.x - player.position.x) < 38) {
-                    isGameOver = true; setTimeout(() => window.location.reload(), 1000);
+                    isGameOver = true;
+                    setTimeout(() => window.location.reload(), 500);
                 }
             });
         }
-        camera.position.y = player.position.y - 250; camera.position.x = player.position.x + 250;
-        camera.lookAt(player.position.x, player.position.y, 0); renderer.render(scene, camera);
+        camera.position.y = player.position.y - 250;
+        camera.position.x = player.position.x + 250;
+        camera.lookAt(player.position.x, player.position.y, 0);
+        renderer.render(scene, camera);
     }
 
     window.onkeydown = (e) => {
@@ -201,7 +238,9 @@
             const g = new THREE.Mesh(new THREE.BoxGeometry(1200,tileSize,2), new THREE.MeshLambertMaterial({color:0xbaf455}));
             g.position.y = i * tileSize; map.add(g);
         }
-        addRows(30); buildPlayer(); animate();
+        addRows(30);
+        buildPlayer();
+        animate();
     }
     init();
 </script>
