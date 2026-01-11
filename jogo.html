@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Capy Road - Skins Corrigidas</title>
+    <title>Capy Road - Colisão Corrigida</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Arial Black', sans-serif; background-color: #99c846; touch-action: none; }
         canvas.game { display: block; width: 100vw; height: 100vh; }
@@ -66,7 +66,6 @@
 
     const renderer = new THREE.WebGLRenderer({ canvas: document.querySelector(".game"), antialias: true });
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setClearColor(0x99c846);
 
     const camera = new THREE.OrthographicCamera();
@@ -89,7 +88,6 @@
     }
     window.addEventListener('resize', resize); resize();
 
-    // --- CONSTRUÇÃO DO PLAYER SEM BUGS ---
     function buildPlayer() {
         player.clear();
         const g = new THREE.Group();
@@ -106,64 +104,54 @@
             snout.position.set(0, 24, 20); g.add(snout);
             const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(8.5, 20, 24); g.add(eL);
             const eR = eL.clone(); eR.position.x = -8.5; g.add(eR);
-        } 
-        else if(skinAtual === 'dino') {
+        } else if(skinAtual === 'dino') {
             const mat = new THREE.MeshLambertMaterial({color: 0x388E3C});
             const body = new THREE.Mesh(new THREE.BoxGeometry(18, 22, 26), mat);
             body.position.z = 15; body.castShadow = true; g.add(body);
             const head = new THREE.Mesh(new THREE.BoxGeometry(14, 24, 14), mat);
             head.position.set(0, 10, 32); g.add(head);
-            const belly = new THREE.Mesh(new THREE.BoxGeometry(14, 2, 18), new THREE.MeshLambertMaterial({color: 0xC5E1A5}));
-            belly.position.set(0, 11, 15); g.add(belly);
-            const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(7.5, 18, 36); g.add(eL);
-            const eR = eL.clone(); eR.position.x = -7.5; g.add(eR);
-        }
-        else if(skinAtual === 'pingu') {
+        } else if(skinAtual === 'pingu') {
             const mat = new THREE.MeshLambertMaterial({color: 0x212121});
             const body = new THREE.Mesh(new THREE.BoxGeometry(22, 22, 28), mat);
             body.position.z = 14; body.castShadow = true; g.add(body);
             const belly = new THREE.Mesh(new THREE.BoxGeometry(16, 4, 20), new THREE.MeshLambertMaterial({color: 0xffffff}));
             belly.position.set(0, 10, 12); g.add(belly);
-            const beak = new THREE.Mesh(new THREE.BoxGeometry(6, 6, 4), new THREE.MeshLambertMaterial({color: 0xFFA000}));
-            beak.position.set(0, 12, 22); g.add(beak);
-        }
-        else if(skinAtual === 'croco') {
-            const mat = new THREE.MeshLambertMaterial({color: 0x1B5E20});
-            const body = new THREE.Mesh(new THREE.BoxGeometry(24, 48, 10), mat);
-            body.position.z = 6; body.castShadow = true; g.add(body);
-            const head = new THREE.Mesh(new THREE.BoxGeometry(20, 22, 10), mat);
-            head.position.set(0, 32, 8); g.add(head);
         }
 
-        // Patas padrão para todos não afundarem
         const legGeo = new THREE.BoxGeometry(6, 6, 8);
         const legMat = new THREE.MeshLambertMaterial({color: 0x333333});
         [[-7, 12], [7, 12], [-7, -12], [7, -12]].forEach(p => {
             const leg = new THREE.Mesh(legGeo, legMat);
             leg.position.set(p[0], p[1], 4); g.add(leg);
         });
-
         player.add(g);
+    }
+
+    function createRealisticCar(dir) {
+        const car = new THREE.Group();
+        const colors = [0xff4757, 0x1e90ff, 0x2ed573, 0xffa502, 0x5352ed];
+        const mainColor = colors[Math.floor(Math.random() * colors.length)];
+        const body = new THREE.Mesh(new THREE.BoxGeometry(65, 30, 14), new THREE.MeshLambertMaterial({ color: mainColor }));
+        body.position.z = 10; body.castShadow = true; car.add(body);
+        const cabin = new THREE.Mesh(new THREE.BoxGeometry(38, 26, 12), new THREE.MeshLambertMaterial({ color: mainColor }));
+        cabin.position.set(-5, 0, 22); car.add(cabin);
+        const wheelGeo = new THREE.BoxGeometry(12, 6, 12);
+        const wheelMat = new THREE.MeshLambertMaterial({ color: 0x2d3436 });
+        [[-20, 15], [-20, -15], [20, 15], [20, -15]].forEach(p => {
+            const w = new THREE.Mesh(wheelGeo, wheelMat);
+            w.position.set(p[0], p[1], 6); car.add(w);
+        });
+        if(!dir) car.rotation.z = Math.PI;
+        return car;
     }
 
     function createTree(tile) {
         const group = new THREE.Group(); group.position.x = tile * tileSize;
         const trunk = new THREE.Mesh(new THREE.BoxGeometry(12, 12, 20), new THREE.MeshLambertMaterial({ color: 0x4d2926 }));
         trunk.position.z = 10; group.add(trunk);
-        const crown = new THREE.Mesh(new THREE.BoxGeometry(30, 30, 35), new THREE.MeshLambertMaterial({ color: 0x7aa21d }));
+        const crown = new THREE.Mesh(new THREE.BoxGeometry(30, 30, 35), new THREE.MeshLambertMaterial({ color: 0x2ecc71 }));
         crown.position.z = 35; crown.castShadow = true; group.add(crown);
         return group;
-    }
-
-    function createRealisticCar(dir) {
-        const car = new THREE.Group();
-        const colors = [0xff4757, 0x1e90ff, 0xffa502, 0x2f3542];
-        const body = new THREE.Mesh(new THREE.BoxGeometry(65, 30, 16), new THREE.MeshLambertMaterial({ color: colors[Math.floor(Math.random()*4)] }));
-        body.position.z = 12; body.castShadow = true; car.add(body);
-        const roof = new THREE.Mesh(new THREE.BoxGeometry(35, 26, 10), new THREE.MeshLambertMaterial({ color: 0x333333 }));
-        roof.position.set(-5, 0, 24); car.add(roof);
-        if(!dir) car.rotation.z = Math.PI;
-        return car;
     }
 
     function addRows(n) {
@@ -209,13 +197,23 @@
     function animate() {
         requestAnimationFrame(animate);
         if(!isGameOver) {
-            metadata.forEach(r => {
+            metadata.forEach((r, idx) => {
+                const rowY = (idx + 1) * tileSize;
                 r.vehicles?.forEach(v => {
                     v.ref.position.x += (r.dir?1:-1) * r.speed * 0.016;
-                    if(v.ref.position.x > 500) v.ref.position.x = -500;
-                    if(v.ref.position.x < -500) v.ref.position.x = 500;
+                    if(v.ref.position.x > 550) v.ref.position.x = -550;
+                    if(v.ref.position.x < -550) v.ref.position.x = 550;
+
+                    // --- COLISÃO RIGOROSA ---
+                    const dx = Math.abs(v.ref.position.x - player.position.x);
+                    const dy = Math.abs(rowY - player.position.y);
+                    if(dx < 45 && dy < 20) {
+                        isGameOver = true; 
+                        setTimeout(() => window.location.reload(), 500);
+                    }
                 });
             });
+
             if(movesQueue.length > 0) {
                 const m = movesQueue[0]; m.progress += 0.25;
                 player.position.x = THREE.MathUtils.lerp(position.tile * tileSize, m.tX, m.progress);
@@ -230,12 +228,6 @@
                     if(position.row > metadata.length - 15) addRows(10);
                 }
             }
-            const curR = metadata[position.row - 1];
-            curR?.vehicles?.forEach(v => {
-                if(Math.abs(v.ref.position.x - player.position.x) < 38) {
-                    isGameOver = true; setTimeout(() => window.location.reload(), 500);
-                }
-            });
         }
         camera.position.y = player.position.y - 250; camera.position.x = player.position.x + 250;
         camera.lookAt(player.position.x, player.position.y, 0); renderer.render(scene, camera);
