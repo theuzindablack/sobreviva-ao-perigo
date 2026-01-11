@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Capy Road - Jacaré Arrumado</title>
+    <title>Capy Road - Suporte WASD</title>
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Arial Black', sans-serif; background-color: #99c846; touch-action: none; }
         canvas.game { display: block; width: 100vw; height: 100vh; }
@@ -125,21 +125,17 @@
             beak.position.set(0, 12, 22); g.add(beak);
         }
         else if(skinAtual === 'croco') {
-            const mat = new THREE.MeshLambertMaterial({color: 0x2E7D32}); // Verde escuro
-            // Corpo (em pé)
+            const mat = new THREE.MeshLambertMaterial({color: 0x2E7D32});
             const body = new THREE.Mesh(new THREE.BoxGeometry(20, 24, 24), mat);
             body.position.z = 12; body.castShadow = true; g.add(body);
-            // Focinho comprido
             const snout = new THREE.Mesh(new THREE.BoxGeometry(14, 20, 10), mat);
             snout.position.set(0, 18, 14); g.add(snout);
-            // Cristas/Costas
             const spikeGeo = new THREE.BoxGeometry(8, 8, 8);
             const spikeMat = new THREE.MeshLambertMaterial({color: 0x1B5E20});
             for(let i=0; i<3; i++){
                 const s = new THREE.Mesh(spikeGeo, spikeMat);
                 s.position.set(0, -8 + (i*8), 26); g.add(s);
             }
-            // Olhos
             const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(7, 10, 25); g.add(eL);
             const eR = eL.clone(); eR.position.x = -7; g.add(eR);
         }
@@ -249,6 +245,18 @@
         camera.position.y = player.position.y - 250; camera.position.x = player.position.x + 250;
         camera.lookAt(player.position.x, player.position.y, 0); renderer.render(scene, camera);
     }
+
+    // --- TECLADO (SETAS + WASD) ---
+    window.onkeydown = (e) => {
+        const key = e.key.toLowerCase();
+        const movements = { 
+            arrowup: "forward", w: "forward",
+            arrowdown: "backward", s: "backward",
+            arrowleft: "left", a: "left",
+            arrowright: "right", d: "right"
+        };
+        if(movements[key]) move(movements[key]);
+    };
 
     const setupBtn = (id, dir) => {
         const el = document.getElementById(id);
