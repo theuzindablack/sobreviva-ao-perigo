@@ -52,7 +52,7 @@
 <script type="module">
     import * as THREE from "https://esm.sh/three";
 
-    const skinAtual = localStorage.getItem('skinAtual') || 'capy';
+    const skinAtual = localStorage.getItem('skinAtual') || 'croco';
     const tileSize = 42;
     const minTile = -6;
     const maxTile = 6;
@@ -125,27 +125,49 @@
             beak.position.set(0, 12, 22); g.add(beak);
         }
         else if(skinAtual === 'croco') {
-            const mat = new THREE.MeshLambertMaterial({color: 0x2E7D32});
-            const body = new THREE.Mesh(new THREE.BoxGeometry(20, 24, 24), mat);
-            body.position.z = 12; body.castShadow = true; g.add(body);
-            const snout = new THREE.Mesh(new THREE.BoxGeometry(14, 20, 10), mat);
-            snout.position.set(0, 18, 14); g.add(snout);
-            const spikeGeo = new THREE.BoxGeometry(8, 8, 8);
-            const spikeMat = new THREE.MeshLambertMaterial({color: 0x1B5E20});
-            for(let i=0; i<3; i++){
-                const s = new THREE.Mesh(spikeGeo, spikeMat);
-                s.position.set(0, -8 + (i*8), 26); g.add(s);
+            const darkGreen = new THREE.MeshLambertMaterial({color: 0x1B5E20});
+            const midGreen = new THREE.MeshLambertMaterial({color: 0x2E7D32});
+            
+            // Corpo Principal
+            const body = new THREE.Mesh(new THREE.BoxGeometry(22, 32, 12), midGreen);
+            body.position.z = 10; body.castShadow = true; g.add(body);
+
+            // Cauda (afunilando)
+            const tail = new THREE.Mesh(new THREE.BoxGeometry(12, 18, 8), midGreen);
+            tail.position.set(0, -22, 8); g.add(tail);
+
+            // Focinho Realista (Longo)
+            const snout = new THREE.Mesh(new THREE.BoxGeometry(16, 22, 8), midGreen);
+            snout.position.set(0, 24, 10); g.add(snout);
+            
+            // Narinas
+            const nostrilGeo = new THREE.BoxGeometry(3, 2, 2);
+            const nL = new THREE.Mesh(nostrilGeo, darkGreen); nL.position.set(4, 33, 14); g.add(nL);
+            const nR = nL.clone(); nR.position.x = -4; g.add(nR);
+
+            // Escamas/Cristas nas costas
+            for(let i=0; i<5; i++){
+                const spike = new THREE.Mesh(new THREE.BoxGeometry(6, 6, 4), darkGreen);
+                spike.position.set(0, -15 + (i*10), 16);
+                g.add(spike);
             }
-            const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(7, 10, 25); g.add(eL);
+
+            // Olhos protuberantes (como jacaré na água)
+            const eyeBase = new THREE.Mesh(new THREE.BoxGeometry(6, 6, 6), midGreen);
+            eyeBase.position.set(7, 12, 16); g.add(eyeBase);
+            const eyeBaseR = eyeBase.clone(); eyeBaseR.position.x = -7; g.add(eyeBaseR);
+            
+            const eL = new THREE.Mesh(eyeGeo, eyeMat); eL.position.set(7, 13, 19); g.add(eL);
             const eR = eL.clone(); eR.position.x = -7; g.add(eR);
+
+            // Patas laterais
+            const legGeo = new THREE.BoxGeometry(8, 6, 6);
+            const p1 = new THREE.Mesh(legGeo, midGreen); p1.position.set(13, 10, 4); g.add(p1);
+            const p2 = p1.clone(); p2.position.x = -13; g.add(p2);
+            const p3 = p1.clone(); p3.position.y = -10; g.add(p3);
+            const p4 = p1.clone(); p4.position.x = -13; p4.position.y = -10; g.add(p4);
         }
 
-        const legGeo = new THREE.BoxGeometry(6, 6, 8);
-        const legMat = new THREE.MeshLambertMaterial({color: 0x333333});
-        [[-7, 10], [7, 10], [-7, -10], [7, -10]].forEach(p => {
-            const leg = new THREE.Mesh(legGeo, legMat);
-            leg.position.set(p[0], p[1], 4); g.add(leg);
-        });
         player.add(g);
     }
 
@@ -246,7 +268,6 @@
         camera.lookAt(player.position.x, player.position.y, 0); renderer.render(scene, camera);
     }
 
-    // --- TECLADO (SETAS + WASD) ---
     window.onkeydown = (e) => {
         const key = e.key.toLowerCase();
         const movements = { 
